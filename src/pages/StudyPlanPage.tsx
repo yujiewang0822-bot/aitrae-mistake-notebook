@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Info, Target, CalendarDays, Clock, TrendingUp, BookOpen, PenTool } from 'lucide-react'
+import { Info, Target, CalendarDays, Clock, TrendingUp, BookOpen, PenTool, Pencil, X } from 'lucide-react'
 import Header from '../components/layout/Header'
 import AppCard from '../components/ui/AppCard'
 import StatusTag from '../components/ui/StatusTag'
 import PrimaryButton from '../components/ui/PrimaryButton'
 import SecondaryButton from '../components/ui/SecondaryButton'
 import Modal from '../components/ui/Modal'
+import Toast from '../components/ui/Toast'
 
 interface TodayTask {
   id: number
@@ -30,15 +31,45 @@ interface WeekPlan {
   tasks: string[]
 }
 
+const PRESET_FOCUS_POINTS = [
+  '一元一次方程',
+  '二次函数',
+  '几何证明',
+  '分式方程',
+  '三角形全等',
+  '概率',
+  '应用题建模'
+]
+
 export default function StudyPlanPage() {
   const navigate = useNavigate()
+  const [showToast, setShowToast] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
   const [showInfoModal, setShowInfoModal] = useState(false)
+  
+  // 考试目标编辑相关状态
+  const [showGoalModal, setShowGoalModal] = useState(false)
+  const [examName, setExamName] = useState('期中考试')
+  const [examDate, setExamDate] = useState('2026-06-15')
+  const [dailyDuration, setDailyDuration] = useState<'30' | '45' | '60'>('45')
+  const [tempExamName, setTempExamName] = useState('')
+  const [tempExamDate, setTempExamDate] = useState('')
+  const [tempDailyDuration, setTempDailyDuration] = useState<'30' | '45' | '60'>('45')
+  
+  // 当前重点编辑相关状态
+  const [showFocusModal, setShowFocusModal] = useState(false)
+  const [selectedFocusPoints, setSelectedFocusPoints] = useState<string[]>(['一元一次方程', '二次函数', '几何证明'])
+  const [customFocusPoints, setCustomFocusPoints] = useState<string[]>([])
+  const [tempSelectedFocusPoints, setTempSelectedFocusPoints] = useState<string[]>([])
+  const [tempCustomFocusPoints, setTempCustomFocusPoints] = useState<string[]>([])
+  const [showAddFocusInput, setShowAddFocusInput] = useState(false)
+  const [newFocusInput, setNewFocusInput] = useState('')
 
   const examGoal = {
-    name: '期中考试',
+    name: examName,
     daysLeft: 14,
     strategy: '先补薄弱知识点，再进行专题练习',
-    focusPoints: '一元一次方程、二次函数、几何证明'
+    focusPoints: selectedFocusPoints
   }
 
   const planStats = {
@@ -115,6 +146,128 @@ export default function StudyPlanPage() {
     navigate(path)
   }
 
+  // 考试目标编辑相关函数
+  const handleOpenGoalModal = () => {
+    setTempExamName(examName)
+    setTempExamDate(examDate)
+    setTempDailyDuration(dailyDuration)
+    setShowGoalModal(true)
+  }
+
+  const handleCancelGoalEdit = () => {
+    setShowGoalModal(false)
+  }
+
+  const handleSaveGoal = () => {
+    if (!tempExamName.trim()) {
+      setToastMessage('考试名称不能为空')
+      setShowToast(true)
+      setTimeout(() => setShowToast(false), 2000)
+      return
+    }
+    setExamName(tempExamName)
+    setExamDate(tempExamDate)
+    setDailyDuration(tempDailyDuration)
+    setShowGoalModal(false)
+    setToastMessage('考试目标已更新')
+    setShowToast(true)
+    setTimeout(() => setShowToast(false), 2000)
+  }
+
+  // 当前重点编辑相关函数
+  const handleOpenFocusModal = () => {
+    setTempSelectedFocusPoints([...selectedFocusPoints])
+    setTempCustomFocusPoints([...customFocusPoints])
+    setShowAddFocusInput(false)
+    setNewFocusInput('')
+    setShowFocusModal(true)
+  }
+
+  const handleCancelFocusEdit = () => {
+    setShowFocusModal(false)
+    setShowAddFocusInput(false)
+    setNewFocusInput('')
+  }
+
+  const handleToggleFocusPoint = (point: string) => {
+    if (tempSelectedFocusPoints.includes(point)) {
+      if (tempSelectedFocusPoints.length > 1) {
+        setTempSelectedFocusPoints(tempSelectedFocusPoints.filter(p => p !== point))
+      } else {
+        setToastMessage('至少保留一个重点')
+        setShowToast(true)
+        setTimeout(() => setShowToast(false), 2000)
+      }
+    } else {
+      setTempSelectedFocusPoints([...tempSelectedFocusPoints, point])
+    }
+  }
+
+  const handleAddCustomFocusPoint = () => {
+    setShowAddFocusInput(true)
+  }
+
+  const handleCancelAddFocus = () => {
+    setShowAddFocusInput(false)
+    setNewFocusInput('')
+  }
+
+  const handleConfirmAddFocus = () => {
+    if (!newFocusInput.trim()) {
+      setToastMessage('请输入重点知识点')
+      setShowToast(true)
+      setTimeout(() => setShowToast(false), 2000)
+      return
+    }
+    const allPoints = [...PRESET_FOCUS_POINTS, ...tempCustomFocusPoints]
+    if (allPoints.includes(newFocusInput.trim())) {
+      setToastMessage('该重点已存在')
+      setShowToast(true)
+      setTimeout(() => setShowToast(false), 2000)
+      return
+    }
+    setTempCustomFocusPoints([...tempCustomFocusPoints, newFocusInput.trim()])
+    setTempSelectedFocusPoints([...tempSelectedFocusPoints, newFocusInput.trim()])
+    setShowAddFocusInput(false)
+    setNewFocusInput('')
+    setToastMessage('自定义重点已添加')
+    setShowToast(true)
+    setTimeout(() => setShowToast(false), 2000)
+  }
+
+  const handleDeleteCustomFocusPoint = (point: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const newCustomPoints = tempCustomFocusPoints.filter(p => p !== point)
+    setTempCustomFocusPoints(newCustomPoints)
+    
+    if (tempSelectedFocusPoints.includes(point)) {
+      const newSelectedPoints = tempSelectedFocusPoints.filter(p => p !== point)
+      if (newSelectedPoints.length === 0) {
+        setTempSelectedFocusPoints(['一元一次方程'])
+      } else {
+        setTempSelectedFocusPoints(newSelectedPoints)
+      }
+    }
+    setToastMessage('自定义重点已删除')
+    setShowToast(true)
+    setTimeout(() => setShowToast(false), 2000)
+  }
+
+  const handleSaveFocusPoints = () => {
+    if (tempSelectedFocusPoints.length === 0) {
+      setToastMessage('至少保留一个重点')
+      setShowToast(true)
+      setTimeout(() => setShowToast(false), 2000)
+      return
+    }
+    setSelectedFocusPoints([...tempSelectedFocusPoints])
+    setCustomFocusPoints([...tempCustomFocusPoints])
+    setShowFocusModal(false)
+    setToastMessage('当前重点已更新')
+    setShowToast(true)
+    setTimeout(() => setShowToast(false), 2000)
+  }
+
   const getTypeIcon = (type: string) => {
     switch (type) {
       case '错题复习':
@@ -159,9 +312,19 @@ export default function StudyPlanPage() {
 
       <div className="flex-1 px-4 py-4 overflow-y-auto">
         <AppCard className="mb-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Target className="w-5 h-5 text-primary-600" />
-            <span className="text-gray-900 font-semibold">考试目标</span>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Target className="w-5 h-5 text-primary-600" />
+              <span className="text-gray-900 font-semibold">考试目标</span>
+            </div>
+            <button
+              type="button"
+              onClick={handleOpenGoalModal}
+              className="flex items-center gap-1 text-gray-400 hover:text-gray-600 active:text-gray-700 active:scale-95 transition-all cursor-pointer"
+            >
+              <Pencil className="w-4 h-4" />
+              <span className="text-xs">编辑目标</span>
+            </button>
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -178,9 +341,18 @@ export default function StudyPlanPage() {
               </p>
             </div>
             <div className="mt-2">
-              <span className="text-gray-600 text-xs">当前重点：</span>
-              <div className="flex flex-wrap gap-2 mt-1">
-                {examGoal.focusPoints.split('、').map((point, index) => (
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-gray-600 text-xs">当前重点：</span>
+                <button
+                  type="button"
+                  onClick={handleOpenFocusModal}
+                  className="text-primary-600 text-xs hover:text-primary-700 transition-colors"
+                >
+                  编辑重点
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {examGoal.focusPoints.map((point, index) => (
                   <StatusTag key={index} type="ai">{point}</StatusTag>
                 ))}
               </div>
@@ -221,6 +393,44 @@ export default function StudyPlanPage() {
               className="bg-primary-500 h-2 rounded-full transition-all" 
               style={{ width: `${planStats.completionRate}%` }}
             ></div>
+          </div>
+        </AppCard>
+
+        <AppCard className="mb-4 bg-purple-50 border-purple-100">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+              <Target className="w-4 h-4 text-purple-600" />
+            </div>
+            <span className="text-gray-900 font-semibold">计划生成依据</span>
+          </div>
+          <p className="text-gray-600 text-sm mb-3">
+            AI会根据你的错题记录、掌握状态、练习表现和考试时间，动态生成学习计划。
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex items-center gap-2 text-gray-600 text-sm">
+              <div className="w-1.5 h-1.5 rounded-full bg-purple-400"></div>
+              <span>错题数量</span>
+            </div>
+            <div className="flex items-center gap-2 text-gray-600 text-sm">
+              <div className="w-1.5 h-1.5 rounded-full bg-purple-400"></div>
+              <span>重复错误频率</span>
+            </div>
+            <div className="flex items-center gap-2 text-gray-600 text-sm">
+              <div className="w-1.5 h-1.5 rounded-full bg-purple-400"></div>
+              <span>最近复习结果</span>
+            </div>
+            <div className="flex items-center gap-2 text-gray-600 text-sm">
+              <div className="w-1.5 h-1.5 rounded-full bg-purple-400"></div>
+              <span>举一反三正确率</span>
+            </div>
+            <div className="flex items-center gap-2 text-gray-600 text-sm">
+              <div className="w-1.5 h-1.5 rounded-full bg-purple-400"></div>
+              <span>距离考试时间</span>
+            </div>
+            <div className="flex items-center gap-2 text-gray-600 text-sm">
+              <div className="w-1.5 h-1.5 rounded-full bg-purple-400"></div>
+              <span>用户学习目标</span>
+            </div>
           </div>
         </AppCard>
 
@@ -337,15 +547,176 @@ export default function StudyPlanPage() {
         </div>
       </div>
 
+      {/* AI学习计划说明 Modal */}
       <Modal
         open={showInfoModal}
         title="AI学习计划说明"
         confirmText="我知道了"
+        onCancel={() => setShowInfoModal(false)}
       >
         <p className="text-gray-600 text-sm">
           系统会结合你的错题记录、薄弱知识点、掌握状态和近期考试目标，为你生成阶段性复习计划。
         </p>
       </Modal>
+
+      {/* 编辑考试目标 Modal */}
+      <Modal
+        open={showGoalModal}
+        title="编辑考试目标"
+        onConfirm={handleSaveGoal}
+        onCancel={handleCancelGoalEdit}
+        confirmText="保存"
+        cancelText="取消"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-gray-700 text-sm font-medium mb-2">考试名称</label>
+            <input
+              type="text"
+              value={tempExamName}
+              onChange={(e) => setTempExamName(e.target.value)}
+              placeholder="请输入考试名称"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              maxLength={50}
+            />
+          </div>
+          <div>
+            <label className="block text-gray-700 text-sm font-medium mb-2">考试日期</label>
+            <input
+              type="text"
+              value={tempExamDate}
+              onChange={(e) => setTempExamDate(e.target.value)}
+              placeholder="请输入考试日期"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              maxLength={20}
+            />
+          </div>
+          <div>
+            <label className="block text-gray-700 text-sm font-medium mb-2">每日可学习时长</label>
+            <div className="flex gap-2">
+              {(['30', '45', '60'] as const).map((duration) => (
+                <button
+                  key={duration}
+                  type="button"
+                  onClick={() => setTempDailyDuration(duration)}
+                  className={`flex-1 py-3 rounded-xl text-sm font-medium transition-colors ${
+                    tempDailyDuration === duration
+                      ? 'bg-primary-500 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {duration}分钟
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 编辑当前重点 Modal */}
+      <Modal
+        open={showFocusModal}
+        title="编辑当前重点"
+        onConfirm={handleSaveFocusPoints}
+        onCancel={handleCancelFocusEdit}
+        confirmText="保存修改"
+        cancelText="取消"
+      >
+        <div className="space-y-4">
+          <div>
+            <p className="text-gray-700 text-sm font-medium mb-2">预设重点</p>
+            <div className="flex flex-wrap gap-2">
+              {PRESET_FOCUS_POINTS.map((point) => (
+                <button
+                  key={point}
+                  type="button"
+                  onClick={() => handleToggleFocusPoint(point)}
+                  className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
+                    tempSelectedFocusPoints.includes(point)
+                      ? 'bg-primary-500 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {point}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          {tempCustomFocusPoints.length > 0 && (
+            <div>
+              <p className="text-gray-700 text-sm font-medium mb-2">自定义重点</p>
+              <div className="flex flex-wrap gap-2">
+                {tempCustomFocusPoints.map((point) => (
+                  <div
+                    key={point}
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-sm ${
+                      tempSelectedFocusPoints.includes(point)
+                        ? 'bg-primary-500 text-white'
+                        : 'bg-gray-100 text-gray-700'
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleToggleFocusPoint(point)}
+                      className="cursor-pointer"
+                    >
+                      {point}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeleteCustomFocusPoint(point, e)}
+                      className="ml-1 hover:opacity-70"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!showAddFocusInput ? (
+            <button
+              type="button"
+              onClick={handleAddCustomFocusPoint}
+              className="w-full py-2 border border-dashed border-gray-300 rounded-xl text-gray-500 text-sm hover:border-primary-500 hover:text-primary-600 transition-colors"
+            >
+              + 自定义重点
+            </button>
+          ) : (
+            <div className="space-y-2">
+              <input
+                type="text"
+                value={newFocusInput}
+                onChange={(e) => setNewFocusInput(e.target.value)}
+                placeholder="请输入重点知识点"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                maxLength={20}
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleCancelAddFocus}
+                  className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm hover:bg-gray-200 transition-colors"
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmAddFocus}
+                  className="flex-1 py-2 bg-primary-500 text-white rounded-xl text-sm hover:bg-primary-600 transition-colors"
+                >
+                  添加
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      <Toast message={toastMessage} visible={showToast} />
     </div>
   )
 }

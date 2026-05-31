@@ -1,20 +1,58 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Search, BookOpen, ChevronDown } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Search, BookOpen, ChevronDown, AlertCircle } from 'lucide-react'
 import Header from '../components/layout/Header'
 import BottomNav from '../components/layout/BottomNav'
 import AppCard from '../components/ui/AppCard'
+import StatusTag from '../components/ui/StatusTag'
 import PrimaryButton from '../components/ui/PrimaryButton'
 import MistakeCard from '../components/business/MistakeCard'
 import { mistakes, homeSummary } from '../data/mockData'
 
+interface IncompleteMistake {
+  id: number
+  question: string
+  status: string
+  description: string
+}
+
+const incompleteMistakes: IncompleteMistake[] = [
+  {
+    id: 1,
+    question: '解方程 3x - 5 = 10',
+    status: '待完善',
+    description: '待确认知识点和错误类型'
+  },
+  {
+    id: 2,
+    question: '二次函数顶点坐标判断',
+    status: '待完善',
+    description: '待确认错因分析'
+  },
+  {
+    id: 3,
+    question: '几何辅助线证明',
+    status: '待完善',
+    description: '待补充复习安排'
+  }
+]
+
 export default function MistakeListPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [selectedTag, setSelectedTag] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
 
+  useEffect(() => {
+    const filter = searchParams.get('filter')
+    if (filter === 'incomplete') {
+      setSelectedTag('incomplete')
+    }
+  }, [searchParams])
+
   const filterTags = [
     { key: 'all', label: '全部' },
+    { key: 'incomplete', label: '待完善' },
     { key: 'pending', label: '待复习' },
     { key: 'reviewing', label: '待强化' },
     { key: 'mastered', label: '已掌握' },
@@ -22,13 +60,21 @@ export default function MistakeListPage() {
   ]
 
   const filterMistakes = mistakes.filter(mistake => {
-    const matchesTag = selectedTag === 'all' || mistake.status === selectedTag
+    const matchesTag = selectedTag === 'all' || selectedTag === 'incomplete' || mistake.status === selectedTag
     const matchesSearch = searchQuery === '' || 
       mistake.knowledgePoint.includes(searchQuery) ||
       mistake.questionText.includes(searchQuery) ||
       mistake.tags.some(tag => tag.includes(searchQuery))
     return matchesTag && matchesSearch
   })
+
+  const handleMistakeClick = (mistakeId: number) => {
+    if (selectedTag === 'incomplete') {
+      navigate('/save-mistake')
+    } else {
+      navigate(`/mistake/${mistakeId}`)
+    }
+  }
 
   return (
     <div className="pb-20">
@@ -95,7 +141,42 @@ export default function MistakeListPage() {
           ))}
         </div>
 
-        {filterMistakes.length > 0 ? (
+        {selectedTag === 'incomplete' ? (
+          incompleteMistakes.length > 0 ? (
+            <div className="space-y-3">
+              {incompleteMistakes.map(mistake => (
+                <button
+                  key={mistake.id}
+                  type="button"
+                  onClick={() => handleMistakeClick(mistake.id)}
+                  className="w-full text-left"
+                >
+                  <AppCard className="hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <p className="text-gray-900 font-medium mb-1">{mistake.question}</p>
+                      </div>
+                      <AlertCircle className="w-5 h-5 text-orange-500 flex-shrink-0" />
+                    </div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <StatusTag type="warning">{mistake.status}</StatusTag>
+                    </div>
+                    <p className="text-gray-500 text-sm">{mistake.description}</p>
+                  </AppCard>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <AppCard className="p-8 text-center">
+              <AlertCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">没有待完善错题</h3>
+              <p className="text-sm text-gray-500 mb-4">所有错题都已完善</p>
+              <PrimaryButton onClick={() => setSelectedTag('all')}>
+                查看全部错题
+              </PrimaryButton>
+            </AppCard>
+          )
+        ) : filterMistakes.length > 0 ? (
           <div className="space-y-3">
             {filterMistakes.map(mistake => (
               <MistakeCard

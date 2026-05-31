@@ -1,32 +1,12 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Sparkles, PenTool, Tags, Target, TrendingUp } from 'lucide-react'
 import Header from '../components/layout/Header'
 import BottomNav from '../components/layout/BottomNav'
 import AppCard from '../components/ui/AppCard'
 import PrimaryButton from '../components/ui/PrimaryButton'
-import Toast from '../components/ui/Toast'
 
 export default function PracticeCenterPage() {
   const navigate = useNavigate()
-  const [toastVisible, setToastVisible] = useState(false)
-  const [toastMessage, setToastMessage] = useState('')
-
-  const showToast = (message: string) => {
-    setToastMessage(message)
-    setToastVisible(true)
-    setTimeout(() => {
-      setToastVisible(false)
-    }, 2000)
-  }
-
-  const handleKnowledgePointPractice = () => {
-    showToast('功能建设中')
-  }
-
-  const handlePracticeHistory = () => {
-    showToast('功能建设中')
-  }
 
   return (
     <div className="pb-24">
@@ -63,7 +43,7 @@ export default function PracticeCenterPage() {
           </AppCard>
 
           <AppCard className="p-4">
-            <div className="cursor-pointer" onClick={handleKnowledgePointPractice}>
+            <div className="cursor-pointer" onClick={() => navigate('/knowledge-practice')}>
               <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center mb-3">
                 <Tags className="w-6 h-6 text-blue-600" />
               </div>
@@ -73,17 +53,17 @@ export default function PracticeCenterPage() {
           </AppCard>
 
           <AppCard className="p-4">
-            <div className="cursor-pointer" onClick={() => navigate('/study-plan')}>
+            <div className="cursor-pointer" onClick={() => navigate('/exam-practice')}>
               <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center mb-3">
                 <Target className="w-6 h-6 text-green-600" />
               </div>
               <h3 className="font-semibold text-gray-900 mb-1">考试专题练习</h3>
-              <p className="text-xs text-gray-500">围绕月考、期中、期末目标生成专题练习</p>
+              <p className="text-xs text-gray-500">围绕月考、期中、期末目标自动组卷练习</p>
             </div>
           </AppCard>
 
           <AppCard className="p-4">
-            <div className="cursor-pointer" onClick={handlePracticeHistory}>
+            <div className="cursor-pointer" onClick={() => navigate('/practice-records')}>
               <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center mb-3">
                 <TrendingUp className="w-6 h-6 text-orange-600" />
               </div>
@@ -95,8 +75,6 @@ export default function PracticeCenterPage() {
       </div>
 
       <BottomNav />
-
-      <Toast message={toastMessage} visible={toastVisible} />
     </div>
   )
 }

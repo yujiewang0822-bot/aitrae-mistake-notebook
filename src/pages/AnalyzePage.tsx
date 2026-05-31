@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Pencil, Sparkles, CheckCircle2 } from 'lucide-react'
+import { Pencil, Sparkles, CheckCircle2, Camera } from 'lucide-react'
 import Header from '../components/layout/Header'
 import AppCard from '../components/ui/AppCard'
 import StatusTag from '../components/ui/StatusTag'
@@ -16,28 +16,94 @@ export default function AnalyzePage() {
   const [showModifyModal, setShowModifyModal] = useState(false)
   const [showDiscardModal, setShowDiscardModal] = useState(false)
   const [judgmentResult, setJudgmentResult] = useState<'正确' | '错误' | '无法判断'>('错误')
+  
+  // 新增状态管理
+  const [questionText, setQuestionText] = useState('解方程：3x - 5 = 10，求 x 的值。')
+  const [answerText, setAnswerText] = useState('x = 3')
+  const [tempQuestionText, setTempQuestionText] = useState('')
+  const [tempAnswerText, setTempAnswerText] = useState('')
+  const [showQuestionEditModal, setShowQuestionEditModal] = useState(false)
+  const [showAnswerEditModal, setShowAnswerEditModal] = useState(false)
+  const [showPhotoModal, setShowPhotoModal] = useState(false)
 
   const currentQuestion = 1
   const totalQuestions = 4
   const progress = Math.round((currentQuestion / totalQuestions) * 100)
 
   const handleSaveDraft = () => {
-    setToastMessage('已暂时保存')
+    setToastMessage('已保存到待完善错题，可在错题本中继续编辑')
     setShowToast(true)
     setTimeout(() => {
       setShowToast(false)
-      navigate('/home')
+      navigate('/mistakes')
     }, 1500)
   }
 
-  const handleEditQuestion = () => {
-    setToastMessage('OCR编辑功能建设中')
+  // 题目编辑相关函数
+  const handleOpenQuestionEdit = () => {
+    setTempQuestionText(questionText)
+    setShowQuestionEditModal(true)
+  }
+
+  const handleCancelQuestionEdit = () => {
+    setShowQuestionEditModal(false)
+    setTempQuestionText('')
+  }
+
+  const handleSaveQuestion = () => {
+    if (!tempQuestionText.trim()) {
+      setToastMessage('题目内容不能为空')
+      setShowToast(true)
+      setTimeout(() => setShowToast(false), 2000)
+      return
+    }
+    setQuestionText(tempQuestionText)
+    setShowQuestionEditModal(false)
+    setTempQuestionText('')
+    setToastMessage('题目已更新')
     setShowToast(true)
     setTimeout(() => setShowToast(false), 2000)
   }
 
-  const handleEditAnswer = () => {
-    setToastMessage('答案编辑功能建设中')
+  // 答案编辑相关函数
+  const handleOpenAnswerEdit = () => {
+    setTempAnswerText(answerText)
+    setShowAnswerEditModal(true)
+  }
+
+  const handleCancelAnswerEdit = () => {
+    setShowAnswerEditModal(false)
+    setTempAnswerText('')
+  }
+
+  const handleSaveAnswer = () => {
+    if (!tempAnswerText.trim()) {
+      setToastMessage('答案内容不能为空')
+      setShowToast(true)
+      setTimeout(() => setShowToast(false), 2000)
+      return
+    }
+    setAnswerText(tempAnswerText)
+    setShowAnswerEditModal(false)
+    setTempAnswerText('')
+    setToastMessage('答案已更新')
+    setShowToast(true)
+    setTimeout(() => setShowToast(false), 2000)
+  }
+
+  // 拍照识别答案相关函数
+  const handleOpenPhotoModal = () => {
+    setShowPhotoModal(true)
+  }
+
+  const handleCancelPhoto = () => {
+    setShowPhotoModal(false)
+  }
+
+  const handleSimulateRecognize = () => {
+    setShowPhotoModal(false)
+    setAnswerText('x = 3\n移项后计算为 3')
+    setToastMessage('答案已重新识别')
     setShowToast(true)
     setTimeout(() => setShowToast(false), 2000)
   }
@@ -93,14 +159,14 @@ export default function AnalyzePage() {
             <h3 className="text-gray-900 font-semibold">题目（OCR识别）</h3>
             <button 
               type="button"
-              onClick={handleEditQuestion} 
+              onClick={handleOpenQuestionEdit} 
               className="flex items-center gap-1 text-gray-400 hover:text-gray-600 active:text-gray-700 active:scale-95 transition-all cursor-pointer"
             >
               <Pencil className="w-4 h-4" />
               <span className="text-xs">编辑</span>
             </button>
           </div>
-          <p className="text-gray-800 leading-relaxed">解方程：3x - 5 = 10，求 x 的值。</p>
+          <p className="text-gray-800 leading-relaxed">{questionText}</p>
         </AppCard>
 
         <AppCard className="mb-4">
@@ -108,14 +174,24 @@ export default function AnalyzePage() {
             <h3 className="text-gray-900 font-semibold">我的答案（OCR识别）</h3>
             <button 
               type="button"
-              onClick={handleEditAnswer} 
+              onClick={handleOpenAnswerEdit} 
               className="flex items-center gap-1 text-gray-400 hover:text-gray-600 active:text-gray-700 active:scale-95 transition-all cursor-pointer"
             >
               <Pencil className="w-4 h-4" />
               <span className="text-xs">编辑</span>
             </button>
           </div>
-          <p className="text-gray-800 font-mono text-lg">x = 3</p>
+          <p className="text-gray-800 font-mono text-lg whitespace-pre-line">{answerText}</p>
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <button 
+              type="button"
+              onClick={handleOpenPhotoModal} 
+              className="flex items-center gap-2 text-gray-500 hover:text-gray-700 active:text-gray-800 active:scale-98 transition-all cursor-pointer text-sm"
+            >
+              <Camera className="w-4 h-4" />
+              <span>拍照识别答案</span>
+            </button>
+          </div>
         </AppCard>
 
         <AppCard className="mb-4">
@@ -127,12 +203,14 @@ export default function AnalyzePage() {
             </button>
           </div>
           <div className="flex items-center gap-2 mb-4">
-            <StatusTag type="error">错误</StatusTag>
+            <StatusTag type={judgmentResult === '正确' ? 'success' : judgmentResult === '无法判断' ? 'warning' : 'error'}>
+              {judgmentResult}
+            </StatusTag>
           </div>
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <span className="text-gray-500 text-sm">我的答案：</span>
-              <span className="text-red-600 font-mono">{judgmentResult === '正确' ? 'x = 5' : 'x = 3'}</span>
+              <span className="text-red-600 font-mono">{judgmentResult === '正确' ? 'x = 5' : answerText}</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-gray-500 text-sm">正确答案：</span>
@@ -195,6 +273,66 @@ export default function AnalyzePage() {
           </div>
         </div>
       </div>
+
+      {/* 题目编辑 Modal */}
+      <Modal
+        open={showQuestionEditModal}
+        title="编辑题目"
+        onConfirm={handleSaveQuestion}
+        onCancel={handleCancelQuestionEdit}
+        confirmText="保存"
+        cancelText="取消"
+      >
+        <textarea
+          value={tempQuestionText}
+          onChange={(e) => setTempQuestionText(e.target.value)}
+          placeholder="请输入题目内容"
+          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+          rows={4}
+          maxLength={500}
+          autoFocus
+        />
+      </Modal>
+
+      {/* 答案编辑 Modal */}
+      <Modal
+        open={showAnswerEditModal}
+        title="编辑我的答案"
+        onConfirm={handleSaveAnswer}
+        onCancel={handleCancelAnswerEdit}
+        confirmText="保存"
+        cancelText="取消"
+      >
+        <textarea
+          value={tempAnswerText}
+          onChange={(e) => setTempAnswerText(e.target.value)}
+          placeholder="请输入答案"
+          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none font-mono"
+          rows={3}
+          maxLength={100}
+          autoFocus
+        />
+      </Modal>
+
+      {/* 拍照识别答案 Modal */}
+      <Modal
+        open={showPhotoModal}
+        title="拍照识别答案"
+        onConfirm={handleSimulateRecognize}
+        onCancel={handleCancelPhoto}
+        confirmText="模拟识别"
+        cancelText="取消"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-600 text-sm">
+            你可以拍摄学生手写答案区域，系统会尝试识别答案和解题步骤。
+          </p>
+          <div className="bg-gray-100 rounded-xl border-2 border-dashed border-gray-300 py-8 flex flex-col items-center gap-2">
+            <Camera className="w-10 h-10 text-gray-400" />
+            <p className="text-gray-500 text-sm">答案区域拍照识别</p>
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         open={showModifyModal}

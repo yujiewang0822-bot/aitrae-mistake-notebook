@@ -18,6 +18,9 @@ import MistakeListPage from '../pages/MistakeListPage'
 import StudyPlanPage from '../pages/StudyPlanPage'
 import MessagePage from '../pages/MessagePage'
 import ProfilePage from '../pages/ProfilePage'
+import ExamPracticePage from '../pages/ExamPracticePage'
+import KnowledgePracticePage from '../pages/KnowledgePracticePage'
+import PracticeRecordsPage from '../pages/PracticeRecordsPage'
 
 const router = createBrowserRouter([
   { path: '/', element: <LaunchPage /> },
@@ -37,6 +40,9 @@ const router = createBrowserRouter([
   { path: '/practice-result', element: <PracticeResultPage /> },
   { path: '/mistakes', element: <MistakeListPage /> },
   { path: '/study-plan', element: <StudyPlanPage /> },
+  { path: '/exam-practice', element: <ExamPracticePage /> },
+  { path: '/knowledge-practice', element: <KnowledgePracticePage /> },
+  { path: '/practice-records', element: <PracticeRecordsPage /> },
   { path: '/message', element: <MessagePage /> },
   { path: '/profile', element: <ProfilePage /> },
 ])

@@ -176,6 +176,10 @@ export default function SaveMistakePage() {
     navigate('/home')
   }
 
+  const handleContinueEditing = () => {
+    setShowDiscardModal(false)
+  }
+
   const handleSave = () => {
     setToastMessage('保存成功')
     setShowToast(true)
@@ -378,12 +382,13 @@ export default function SaveMistakePage() {
 
       <Modal
         open={showDiscardModal}
-        title="确定暂不保存吗？"
+        title="确定不保存这道错题吗？"
+        onCancel={handleContinueEditing}
         onConfirm={handleConfirmDiscard}
-        confirmText="暂不保存"
-        cancelText="继续编辑"
+        confirmText="继续编辑"
+        cancelText="暂不保存"
       >
-        <p className="text-gray-600 text-sm">保存后可以用于后续复习和举一反三练习。</p>
+        <p className="text-gray-600 text-sm">不保存后，本次 AI 识别和归因结果将不会加入错题本。你也可以继续编辑后再保存。</p>
       </Modal>
 
       <Modal

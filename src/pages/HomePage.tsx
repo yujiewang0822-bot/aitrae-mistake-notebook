@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Bell, Camera, CalendarDays, Brain, NotebookTabs, TrendingUp } from 'lucide-react'
+import { Bell, Camera, CalendarDays, Brain, TrendingUp, AlertCircle } from 'lucide-react'
 import Header from '../components/layout/Header'
 import BottomNav from '../components/layout/BottomNav'
 import AppCard from '../components/ui/AppCard'
@@ -113,16 +113,16 @@ export default function HomePage() {
           <AppCard className="p-4">
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center flex-shrink-0">
-                <NotebookTabs className="w-6 h-6 text-orange-600" />
+                <AlertCircle className="w-6 h-6 text-orange-600" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-gray-900 mb-1">已收录 {homeSummary.totalMistakes} 道错题</h3>
-                <p className="text-sm text-gray-500 mb-2">查看你反复出错的知识点</p>
-                <span className="text-xs text-gray-400">待掌握 {homeSummary.pendingMasterMistakes} 题｜已掌握 {homeSummary.masteredMistakes} 题</span>
+                <h3 className="font-semibold text-gray-900 mb-1">待完善错题 3 道</h3>
+                <p className="text-sm text-gray-500 mb-2">AI 已识别题目和答案，等待你确认知识点、错误类型和复习安排</p>
+                <span className="text-xs text-gray-400">待确认 3 题｜今日新增 1 题</span>
               </div>
             </div>
-            <PrimaryButton className="mt-4" onClick={() => navigate('/mistakes')}>
-              查看全部
+            <PrimaryButton className="mt-4" onClick={() => navigate('/mistakes?filter=incomplete')}>
+              继续完善
             </PrimaryButton>
           </AppCard>
         </div>

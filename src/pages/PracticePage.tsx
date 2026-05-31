@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PenTool, Target, CheckCircle, XCircle, Lightbulb, ChevronLeft } from 'lucide-react'
 import AppCard from '../components/ui/AppCard'
 import StatusTag from '../components/ui/StatusTag'
@@ -10,6 +10,7 @@ import Toast from '../components/ui/Toast'
 
 export default function PracticePage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
   const [showExitModal, setShowExitModal] = useState(false)
@@ -19,8 +20,17 @@ export default function PracticePage() {
   const [submitted, setSubmitted] = useState(false)
   const [isCorrect, setIsCorrect] = useState(false)
 
+  const from = searchParams.get('from')
+  const mode = searchParams.get('mode')
+  const taskId = searchParams.get('taskId')
+  const isFromTodayReview = from === 'today-review'
+
   const handleBack = () => {
-    navigate('/mistake/1')
+    if (isFromTodayReview) {
+      navigate('/today-review')
+    } else {
+      navigate('/mistake/1')
+    }
   }
 
   const handleExit = () => {
@@ -29,7 +39,11 @@ export default function PracticePage() {
 
   const handleConfirmExit = () => {
     setShowExitModal(false)
-    navigate('/practice')
+    if (isFromTodayReview) {
+      navigate('/today-review')
+    } else {
+      navigate('/practice')
+    }
   }
 
   const handleViewHint = () => {
@@ -57,12 +71,27 @@ export default function PracticePage() {
   }
 
   const handleNext = () => {
-    navigate('/practice-result')
+    if (isFromTodayReview && taskId) {
+      navigate(`/practice-result?from=today-review&taskId=${taskId}`)
+    } else {
+      navigate('/practice-result')
+    }
+  }
+
+  const getModeTitle = () => {
+    if (mode === 'redo') return '重新作答'
+    if (mode === 'similar') return '举一反三'
+    return '举一反三'
+  }
+
+  const getModeDescription = () => {
+    if (mode === 'redo') return '这道题属于重点复习任务，建议重新动手做一遍。'
+    if (mode === 'similar') return '系统将通过同类题检测你是否真正掌握。'
+    return ''
   }
 
   return (
     <div className="min-h-screen bg-[#F6F8FB] flex flex-col">
-      {/* 自定义顶部栏 */}
       <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
         <button
           type="button"
@@ -82,14 +111,15 @@ export default function PracticePage() {
       </div>
 
       <div className="flex-1 px-4 py-4 overflow-y-auto">
-        <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-4">
-          <div className="flex items-center gap-2 mb-1">
-            <Target className="w-4 h-4 text-blue-600" />
-            <span className="text-blue-700 text-sm font-medium">练习来源</span>
+        {isFromTodayReview && (
+          <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Target className="w-4 h-4 text-blue-600" />
+              <span className="text-blue-700 text-sm font-medium">今日复习 · {getModeTitle()}</span>
+            </div>
+            <p className="text-blue-600 text-sm">{getModeDescription()}</p>
           </div>
-          <p className="text-blue-600 text-sm">基于错题：一元一次方程移项错误</p>
-          <p className="text-blue-500 text-xs">练习目标：强化同知识点、同错误类型题目</p>
-        </div>
+        )}
 
         <AppCard className="mb-4">
           <div className="flex items-center justify-between mb-3">
