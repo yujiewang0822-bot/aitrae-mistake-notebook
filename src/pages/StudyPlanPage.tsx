@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Info, Target, CalendarDays, Clock, TrendingUp, BookOpen, PenTool, Pencil, X } from 'lucide-react'
+import { Info, Target, CalendarDays, TrendingUp, BookOpen, Pencil, X, ChevronRight } from 'lucide-react'
 import Header from '../components/layout/Header'
 import AppCard from '../components/ui/AppCard'
 import StatusTag from '../components/ui/StatusTag'
@@ -8,28 +8,6 @@ import PrimaryButton from '../components/ui/PrimaryButton'
 import SecondaryButton from '../components/ui/SecondaryButton'
 import Modal from '../components/ui/Modal'
 import Toast from '../components/ui/Toast'
-
-interface TodayTask {
-  id: number
-  title: string
-  type: string
-  duration: number
-  reason: string
-  status: 'pending' | 'inProgress' | 'completed'
-  actionText: string
-  actionPath: string
-}
-
-interface WeakKnowledge {
-  name: string
-  status: string
-}
-
-interface WeekPlan {
-  day: number
-  label: string
-  tasks: string[]
-}
 
 const PRESET_FOCUS_POINTS = [
   '一元一次方程',
@@ -47,16 +25,14 @@ export default function StudyPlanPage() {
   const [toastMessage, setToastMessage] = useState('')
   const [showInfoModal, setShowInfoModal] = useState(false)
   
-  // 考试目标编辑相关状态
   const [showGoalModal, setShowGoalModal] = useState(false)
-  const [examName, setExamName] = useState('期中考试')
-  const [examDate, setExamDate] = useState('2026-06-15')
-  const [dailyDuration, setDailyDuration] = useState<'30' | '45' | '60'>('45')
+  const [examName, setExamName] = useState('期中考')
+  const [examDate, setExamDate] = useState('2026-06-18')
+  const [dailyDuration, setDailyDuration] = useState<'30' | '45' | '60'>('30')
   const [tempExamName, setTempExamName] = useState('')
   const [tempExamDate, setTempExamDate] = useState('')
-  const [tempDailyDuration, setTempDailyDuration] = useState<'30' | '45' | '60'>('45')
+  const [tempDailyDuration, setTempDailyDuration] = useState<'30' | '45' | '60'>('30')
   
-  // 当前重点编辑相关状态
   const [showFocusModal, setShowFocusModal] = useState(false)
   const [selectedFocusPoints, setSelectedFocusPoints] = useState<string[]>(['一元一次方程', '二次函数', '几何证明'])
   const [customFocusPoints, setCustomFocusPoints] = useState<string[]>([])
@@ -68,66 +44,72 @@ export default function StudyPlanPage() {
   const examGoal = {
     name: examName,
     daysLeft: 14,
-    strategy: '先补薄弱知识点，再进行专题练习',
+    duration: dailyDuration,
     focusPoints: selectedFocusPoints
   }
 
-  const planStats = {
-    cycle: 7,
-    todayTasks: 3,
-    completed: 1,
-    duration: 35,
-    completionRate: 33
-  }
-
-  const todayTasks: TodayTask[] = [
+  const priorityTopics = [
     {
       id: 1,
-      title: '复习一元一次方程错题',
-      type: '错题复习',
-      duration: 10,
-      reason: '近7天计算错误重复出现',
-      status: 'pending',
-      actionText: '开始复习',
-      actionPath: '/today-review'
+      priority: '第一优先级',
+      name: '一元一次方程',
+      reason: '错题数最多，移项符号错误重复出现',
+      stats: { mistakes: 12, pending: 4, mastery: 70 },
+      actionPath: '/practice/1?from=study-plan&type=priority'
     },
     {
       id: 2,
-      title: '完成二次函数专题练习',
-      type: '专题练习',
-      duration: 15,
-      reason: '近期正确率低于 70%',
-      status: 'inProgress',
-      actionText: '开始练习',
-      actionPath: '/practice/1'
+      priority: '第二优先级',
+      name: '二次函数',
+      reason: '顶点坐标判断正确率偏低',
+      stats: { mistakes: 9, pending: 3, mastery: 62 },
+      actionPath: '/practice/1?from=study-plan&type=priority'
     },
     {
       id: 3,
-      title: '整理几何证明错因',
-      type: '错因复盘',
-      duration: 10,
-      reason: '步骤遗漏类错误较多',
-      status: 'completed',
-      actionText: '查看详情',
-      actionPath: '/mistake/1'
+      priority: '第三优先级',
+      name: '几何证明',
+      reason: '证明步骤遗漏较多',
+      stats: { mistakes: 7, pending: 5, mastery: 55 },
+      actionPath: '/practice/1?from=study-plan&type=priority'
     }
   ]
 
-  const weakKnowledge: WeakKnowledge[] = [
-    { name: '一元一次方程', status: '需重点复习' },
-    { name: '二次函数', status: '正确率偏低' },
-    { name: '三角形全等', status: '易重复出错' },
-    { name: '分式方程', status: '需重点复习' }
+  const stages = [
+    {
+      id: 1,
+      name: '整理与补缺',
+      period: '第1-3天',
+      goal: '确认待完善错题，补齐章节归属和错因',
+      focus: '一元一次方程、二次函数',
+      actionPath: '/mistakes'
+    },
+    {
+      id: 2,
+      name: '专项巩固',
+      period: '第4-10天',
+      goal: '针对高频错因进行练习',
+      focus: '移项符号错误、顶点坐标判断、证明步骤遗漏',
+      actionPath: '/knowledge-practice'
+    },
+    {
+      id: 3,
+      name: '考前模拟',
+      period: '第11-14天',
+      goal: '通过专题组卷进行综合检测',
+      focus: '期中模拟卷、薄弱单元混合练习',
+      actionPath: '/exam-practice'
+    }
   ]
 
-  const weekPlan: WeekPlan[] = [
-    { day: 1, label: '今天', tasks: ['错题复习', '一元一次方程练习'] },
-    { day: 2, label: '明天', tasks: ['二次函数专题'] },
-    { day: 3, label: '第3天', tasks: ['几何证明复盘'] },
-    { day: 4, label: '第4天', tasks: ['分式方程练习'] },
-    { day: 5, label: '第5天', tasks: ['综合小测'] },
-    { day: 6, label: '第6天', tasks: ['重点错题回看'] },
-    { day: 7, label: '第7天', tasks: ['考前模拟复习'] }
+  const planBasis = [
+    '错题数量',
+    '待复习状态',
+    '单元掌握度',
+    '高频错因',
+    '最近练习正确率',
+    '距离考试时间',
+    '每日可用学习时间'
   ]
 
   const handleBack = () => {
@@ -138,15 +120,10 @@ export default function StudyPlanPage() {
     setShowInfoModal(true)
   }
 
-  const handleStartTodayPlan = () => {
-    navigate('/today-review')
-  }
-
   const handleTaskAction = (path: string) => {
     navigate(path)
   }
 
-  // 考试目标编辑相关函数
   const handleOpenGoalModal = () => {
     setTempExamName(examName)
     setTempExamDate(examDate)
@@ -174,7 +151,6 @@ export default function StudyPlanPage() {
     setTimeout(() => setShowToast(false), 2000)
   }
 
-  // 当前重点编辑相关函数
   const handleOpenFocusModal = () => {
     setTempSelectedFocusPoints([...selectedFocusPoints])
     setTempCustomFocusPoints([...customFocusPoints])
@@ -263,35 +239,9 @@ export default function StudyPlanPage() {
     setSelectedFocusPoints([...tempSelectedFocusPoints])
     setCustomFocusPoints([...tempCustomFocusPoints])
     setShowFocusModal(false)
-    setToastMessage('当前重点已更新')
+    setToastMessage('复习重点已更新')
     setShowToast(true)
     setTimeout(() => setShowToast(false), 2000)
-  }
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case '错题复习':
-        return BookOpen
-      case '专题练习':
-        return TrendingUp
-      case '错因复盘':
-        return PenTool
-      default:
-        return BookOpen
-    }
-  }
-
-  const getStatusTag = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <StatusTag type="default">待完成</StatusTag>
-      case 'inProgress':
-        return <StatusTag type="warning">进行中</StatusTag>
-      case 'completed':
-        return <StatusTag type="success">已完成</StatusTag>
-      default:
-        return null
-    }
   }
 
   return (
@@ -311,8 +261,12 @@ export default function StudyPlanPage() {
       />
 
       <div className="flex-1 px-4 py-4 overflow-y-auto">
+        <div className="text-center mb-4">
+          <p className="text-gray-500 text-sm">根据考试目标和数学错题分布，生成阶段性复习规划</p>
+        </div>
+
         <AppCard className="mb-4">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Target className="w-5 h-5 text-primary-600" />
               <span className="text-gray-900 font-semibold">考试目标</span>
@@ -326,206 +280,126 @@ export default function StudyPlanPage() {
               <span className="text-xs">编辑目标</span>
             </button>
           </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600 text-sm">近期目标</span>
-              <span className="text-gray-900 font-medium">{examGoal.name}</span>
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <p className="text-gray-500 text-xs mb-1">目标考试</p>
+              <p className="text-gray-900 font-bold">{examGoal.name}</p>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600 text-sm">剩余时间</span>
-              <span className="text-orange-500 font-medium">{examGoal.daysLeft} 天</span>
+            <div>
+              <p className="text-gray-500 text-xs mb-1">考试时间</p>
+              <p className="text-orange-500 font-bold">{examGoal.daysLeft}天后</p>
             </div>
-            <div className="p-3 bg-blue-50 rounded-xl mt-2">
-              <p className="text-blue-700 text-sm">
-                <span className="font-medium">推荐策略：</span>{examGoal.strategy}
-              </p>
-            </div>
-            <div className="mt-2">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-gray-600 text-xs">当前重点：</span>
-                <button
-                  type="button"
-                  onClick={handleOpenFocusModal}
-                  className="text-primary-600 text-xs hover:text-primary-700 transition-colors"
-                >
-                  编辑重点
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {examGoal.focusPoints.map((point, index) => (
-                  <StatusTag key={index} type="ai">{point}</StatusTag>
-                ))}
-              </div>
+            <div>
+              <p className="text-gray-500 text-xs mb-1">每日可用时间</p>
+              <p className="text-primary-600 font-bold">{examGoal.duration}分钟</p>
             </div>
           </div>
         </AppCard>
 
         <AppCard className="mb-4">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <CalendarDays className="w-5 h-5 text-primary-600" />
-              <span className="text-gray-900 font-semibold">学习计划概览</span>
+              <TrendingUp className="w-5 h-5 text-primary-600" />
+              <span className="text-gray-900 font-semibold">复习优先级</span>
             </div>
-            <span className="text-primary-600 font-bold text-xl">{planStats.completionRate}%</span>
+            <button
+              type="button"
+              onClick={handleOpenFocusModal}
+              className="text-primary-600 text-xs hover:text-primary-700 transition-colors"
+            >
+              调整复习重点
+            </button>
           </div>
-          
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className="text-center">
-              <p className="text-gray-500 text-xs mb-1">计划周期</p>
-              <p className="text-gray-800 font-bold text-lg">{planStats.cycle} 天</p>
-            </div>
-            <div className="text-center">
-              <p className="text-gray-500 text-xs mb-1">今日任务</p>
-              <p className="text-gray-800 font-bold text-lg">{planStats.todayTasks} 项</p>
-            </div>
-            <div className="text-center">
-              <p className="text-gray-500 text-xs mb-1">已完成</p>
-              <p className="text-green-600 font-bold text-lg">{planStats.completed} 项</p>
-            </div>
-            <div className="text-center">
-              <p className="text-gray-500 text-xs mb-1">预计用时</p>
-              <p className="text-gray-800 font-bold text-lg">{planStats.duration} 分钟</p>
-            </div>
-          </div>
-
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
-              className="bg-primary-500 h-2 rounded-full transition-all" 
-              style={{ width: `${planStats.completionRate}%` }}
-            ></div>
-          </div>
-        </AppCard>
-
-        <AppCard className="mb-4 bg-purple-50 border-purple-100">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
-              <Target className="w-4 h-4 text-purple-600" />
-            </div>
-            <span className="text-gray-900 font-semibold">计划生成依据</span>
-          </div>
-          <p className="text-gray-600 text-sm mb-3">
-            AI会根据你的错题记录、掌握状态、练习表现和考试时间，动态生成学习计划。
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="flex items-center gap-2 text-gray-600 text-sm">
-              <div className="w-1.5 h-1.5 rounded-full bg-purple-400"></div>
-              <span>错题数量</span>
-            </div>
-            <div className="flex items-center gap-2 text-gray-600 text-sm">
-              <div className="w-1.5 h-1.5 rounded-full bg-purple-400"></div>
-              <span>重复错误频率</span>
-            </div>
-            <div className="flex items-center gap-2 text-gray-600 text-sm">
-              <div className="w-1.5 h-1.5 rounded-full bg-purple-400"></div>
-              <span>最近复习结果</span>
-            </div>
-            <div className="flex items-center gap-2 text-gray-600 text-sm">
-              <div className="w-1.5 h-1.5 rounded-full bg-purple-400"></div>
-              <span>举一反三正确率</span>
-            </div>
-            <div className="flex items-center gap-2 text-gray-600 text-sm">
-              <div className="w-1.5 h-1.5 rounded-full bg-purple-400"></div>
-              <span>距离考试时间</span>
-            </div>
-            <div className="flex items-center gap-2 text-gray-600 text-sm">
-              <div className="w-1.5 h-1.5 rounded-full bg-purple-400"></div>
-              <span>用户学习目标</span>
-            </div>
-          </div>
-        </AppCard>
-
-        <AppCard className="mb-4">
-          <h3 className="text-gray-900 font-semibold flex items-center gap-2 mb-4">
-            <Clock className="w-4 h-4 text-primary-600" />
-            今日计划任务
-          </h3>
+          <p className="text-gray-500 text-xs mb-3">AI 根据错题数量、待复习状态和最近练习表现排序</p>
           <div className="space-y-3">
-            {todayTasks.map(task => {
-              const TypeIcon = getTypeIcon(task.type)
-              return (
-                <div 
-                  key={task.id} 
-                  className="p-3 bg-gray-50 rounded-xl"
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                        task.status === 'completed' ? 'bg-green-100' : 
-                        task.status === 'inProgress' ? 'bg-orange-100' : 'bg-blue-100'
-                      }`}>
-                        <TypeIcon className={`w-4 h-4 ${
-                          task.status === 'completed' ? 'text-green-600' : 
-                          task.status === 'inProgress' ? 'text-orange-600' : 'text-blue-600'
-                        }`} />
-                      </div>
-                      <div>
-                        <p className="text-gray-900 font-medium">{task.title}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <StatusTag type="default">{task.type}</StatusTag>
-                          <span className="text-gray-400 text-xs">{task.duration} 分钟</span>
-                        </div>
-                      </div>
+            {priorityTopics.map(topic => (
+              <div key={topic.id} className="p-3 bg-gray-50 rounded-xl">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <StatusTag type={topic.id === 1 ? 'error' : topic.id === 2 ? 'warning' : 'default'}>
+                        {topic.priority}
+                      </StatusTag>
+                      <span className="text-gray-900 font-medium">{topic.name}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {getStatusTag(task.status)}
-                      {task.status !== 'completed' && (
-                        <button
-                          type="button"
-                          onClick={() => handleTaskAction(task.actionPath)}
-                          className="px-3 py-1 bg-primary-500 text-white text-xs rounded-full hover:bg-primary-600 transition-colors"
-                        >
-                          {task.actionText}
-                        </button>
-                      )}
+                    <p className="text-gray-600 text-xs mb-2">{topic.reason}</p>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="px-2 py-0.5 bg-white text-xs text-gray-600 rounded-full">
+                        {topic.stats.mistakes}道错题
+                      </span>
+                      <span className="px-2 py-0.5 bg-white text-xs text-gray-600 rounded-full">
+                        待复习{topic.stats.pending}道
+                      </span>
+                      <span className="px-2 py-0.5 bg-white text-xs text-gray-600 rounded-full">
+                        掌握度{topic.stats.mastery}%
+                      </span>
                     </div>
                   </div>
-                  <p className="text-gray-500 text-xs ml-10">复习原因：{task.reason}</p>
+                  <button
+                    type="button"
+                    onClick={() => handleTaskAction(topic.actionPath)}
+                    className="px-3 py-1.5 bg-primary-500 text-white text-xs rounded-full hover:bg-primary-600 transition-colors flex items-center gap-1"
+                  >
+                    去练习
+                    <ChevronRight className="w-3 h-3" />
+                  </button>
                 </div>
-              )
-            })}
-          </div>
-        </AppCard>
-
-        <AppCard className="mb-4">
-          <h3 className="text-gray-900 font-semibold mb-3">当前薄弱知识点</h3>
-          <div className="space-y-2">
-            {weakKnowledge.map((item, index) => (
-              <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
-                <StatusTag type="error">{item.name}</StatusTag>
-                <span className="text-gray-500 text-sm">{item.status}</span>
               </div>
             ))}
           </div>
         </AppCard>
 
         <AppCard className="mb-4">
-          <h3 className="text-gray-900 font-semibold flex items-center gap-2 mb-4">
-            <CalendarDays className="w-4 h-4 text-primary-600" />
-            接下来 7 天安排
-          </h3>
-          <div className="space-y-3">
-            {weekPlan.map(day => (
-              <div key={day.day} className="flex gap-3">
+          <div className="flex items-center gap-2 mb-4">
+            <CalendarDays className="w-5 h-5 text-primary-600" />
+            <span className="text-gray-900 font-semibold">阶段复习安排</span>
+          </div>
+          <div className="space-y-4">
+            {stages.map(stage => (
+              <div key={stage.id} className="flex items-start gap-3">
                 <div className="flex flex-col items-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                    day.day === 1 ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600'
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
+                    stage.id === 1 ? 'bg-primary-500 text-white' : 
+                    stage.id === 2 ? 'bg-orange-500 text-white' : 'bg-green-500 text-white'
                   }`}>
-                    <span className="text-xs font-medium">{day.day}</span>
+                    {stage.id}
                   </div>
-                  {day.day < 7 && <div className="w-0.5 h-full min-h-[40px] bg-gray-200 mt-1"></div>}
+                  {stage.id < 3 && <div className="w-0.5 h-full min-h-[60px] bg-gray-200 mt-2"></div>}
                 </div>
                 <div className="flex-1 pb-3">
-                  <p className={`text-sm font-medium mb-1 ${day.day === 1 ? 'text-primary-600' : 'text-gray-700'}`}>
-                    {day.label}
-                  </p>
-                  <div className="flex flex-wrap gap-1">
-                    {day.tasks.map((task, index) => (
-                      <span key={index} className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
-                        {task}
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-gray-900 font-medium">{stage.name}</h4>
+                      <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs rounded-full">
+                        {stage.period}
                       </span>
-                    ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleTaskAction(stage.actionPath)}
+                      className="px-3 py-1 bg-primary-50 text-primary-600 text-xs rounded-full hover:bg-primary-100 transition-colors"
+                    >
+                      开始
+                    </button>
                   </div>
+                  <p className="text-gray-600 text-xs mb-1">目标：{stage.goal}</p>
+                  <p className="text-gray-500 text-xs">重点：{stage.focus}</p>
                 </div>
+              </div>
+            ))}
+          </div>
+        </AppCard>
+
+        <AppCard className="mb-4 bg-blue-50 border-blue-100">
+          <div className="flex items-center gap-2 mb-3">
+            <BookOpen className="w-5 h-5 text-blue-600" />
+            <span className="text-gray-900 font-semibold">计划生成依据</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {planBasis.map((basis, index) => (
+              <div key={index} className="flex items-center gap-2 text-gray-700 text-sm">
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-400"></div>
+                <span>{basis}</span>
               </div>
             ))}
           </div>
@@ -540,14 +414,13 @@ export default function StudyPlanPage() {
             </SecondaryButton>
           </div>
           <div className="flex-1">
-            <PrimaryButton className="w-full" onClick={handleStartTodayPlan}>
-              开始今日计划
+            <PrimaryButton className="w-full" onClick={() => navigate('/practice')}>
+              去练习中心
             </PrimaryButton>
           </div>
         </div>
       </div>
 
-      {/* AI学习计划说明 Modal */}
       <Modal
         open={showInfoModal}
         title="AI学习计划说明"
@@ -559,7 +432,6 @@ export default function StudyPlanPage() {
         </p>
       </Modal>
 
-      {/* 编辑考试目标 Modal */}
       <Modal
         open={showGoalModal}
         title="编辑考试目标"
@@ -613,16 +485,16 @@ export default function StudyPlanPage() {
         </div>
       </Modal>
 
-      {/* 编辑当前重点 Modal */}
       <Modal
         open={showFocusModal}
-        title="编辑当前重点"
+        title="调整复习重点"
         onConfirm={handleSaveFocusPoints}
         onCancel={handleCancelFocusEdit}
         confirmText="保存修改"
         cancelText="取消"
       >
         <div className="space-y-4">
+          <p className="text-gray-500 text-xs">AI 会根据你选择的重点调整复习优先级。</p>
           <div>
             <p className="text-gray-700 text-sm font-medium mb-2">预设重点</p>
             <div className="flex flex-wrap gap-2">

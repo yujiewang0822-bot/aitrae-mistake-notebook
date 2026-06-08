@@ -47,8 +47,13 @@ export default function BottomNav() {
   }
 
   return (
-    <nav className="md:absolute bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-100 md:max-w-[390px] md:mx-auto md:rounded-t-2xl">
-      <div className="fixed md:relative bottom-0 left-0 right-0 flex items-center justify-around h-16 bg-white md:bg-transparent border-t md:border-t-0 border-gray-100" style={{ maxWidth: '390px', margin: '0 auto', left: '50%', transform: 'translateX(-50%)', bottom: 'max(env(safe-area-inset-bottom), 0px)' }}>
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-100">
+      <div 
+        className="h-16 flex items-center justify-around bg-white border-t border-gray-100 max-w-[1200px] mx-auto"
+        style={{ 
+          bottom: 'max(env(safe-area-inset-bottom), 0px)'
+        }}
+      >
         {tabs.map((tab) => {
           const active = isActive(tab.path)
           return (

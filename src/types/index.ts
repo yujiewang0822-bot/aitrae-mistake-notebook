@@ -1,4 +1,5 @@
 export interface UserProfile {
+  nickname?: string
   grade: string
   textbookVersion: string
   examGoal: string

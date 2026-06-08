@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useMemo } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Pencil, Sparkles, CheckCircle2, Camera } from 'lucide-react'
 import Header from '../components/layout/Header'
 import AppCard from '../components/ui/AppCard'
@@ -9,37 +9,226 @@ import SecondaryButton from '../components/ui/SecondaryButton'
 import Modal from '../components/ui/Modal'
 import Toast from '../components/ui/Toast'
 
+interface QuestionData {
+  id: number
+  title: string
+  aiAnswer: string
+  correctAnswer: string
+  judgment: '正确' | '错误' | '部分正确'
+  analysis: string
+}
+
+const mockQuestions: QuestionData[] = [
+  {
+    id: 1,
+    title: '解方程 3x - 5 = 10',
+    aiAnswer: 'x = 5',
+    correctAnswer: 'x = 5',
+    judgment: '正确',
+    analysis: '本题作答正确，可选择不加入错题本，或作为易错题记录。'
+  },
+  {
+    id: 2,
+    title: '二次函数 y = x² - 4x + 3 的顶点坐标',
+    aiAnswer: '(2, -1)',
+    correctAnswer: '(2, -1)',
+    judgment: '正确',
+    analysis: '顶点公式掌握较好，建议后续关注图像平移题型。'
+  },
+  {
+    id: 3,
+    title: '几何证明中添加辅助线完成全等证明',
+    aiAnswer: '步骤缺失',
+    correctAnswer: '需补充辅助线并证明对应边角关系',
+    judgment: '错误',
+    analysis: '证明步骤遗漏，辅助线构造意识不足。'
+  },
+  {
+    id: 4,
+    title: '分式方程化简并检验增根',
+    aiAnswer: 'x = 2',
+    correctAnswer: 'x = 2，但需检验增根',
+    judgment: '部分正确',
+    analysis: '计算结果正确，但漏写检验步骤，属于过程不完整。'
+  },
+  {
+    id: 5,
+    title: '一次函数图像识别',
+    aiAnswer: '斜率为正',
+    correctAnswer: '斜率为正，截距为负',
+    judgment: '部分正确',
+    analysis: '图像信息提取不完整，建议同时关注斜率和截距。'
+  },
+  {
+    id: 6,
+    title: '解不等式组 {2x + 1 > 5, 3x - 2 < 10}',
+    aiAnswer: 'x > 2',
+    correctAnswer: '2 < x < 4',
+    judgment: '部分正确',
+    analysis: '只求出了第一个不等式的解，第二个不等式未求解。'
+  },
+  {
+    id: 7,
+    title: '投掷两枚硬币，至少一枚正面的概率',
+    aiAnswer: '1/2',
+    correctAnswer: '3/4',
+    judgment: '错误',
+    analysis: '考虑不全面，遗漏了"一正一反"和"两正"两种情况。'
+  },
+  {
+    id: 8,
+    title: '证明圆的切线垂直于过切点的半径',
+    aiAnswer: '因为切线与圆只有一个交点',
+    correctAnswer: '利用反证法证明切线与半径垂直',
+    judgment: '部分正确',
+    analysis: '结论正确，但缺少严谨的证明过程。'
+  },
+  {
+    id: 9,
+    title: '计算 sin(30°) + cos(60°)',
+    aiAnswer: '1',
+    correctAnswer: '1',
+    judgment: '正确',
+    analysis: '三角函数值掌握准确，计算正确。'
+  },
+  {
+    id: 10,
+    title: '等差数列 2, 5, 8, ... 的第10项',
+    aiAnswer: '29',
+    correctAnswer: '29',
+    judgment: '正确',
+    analysis: '等差数列通项公式应用正确。'
+  }
+]
+
 export default function AnalyzePage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
   const [showModifyModal, setShowModifyModal] = useState(false)
-  const [showDiscardModal, setShowDiscardModal] = useState(false)
-  const [judgmentResult, setJudgmentResult] = useState<'正确' | '错误' | '无法判断'>('错误')
-  
-  // 新增状态管理
-  const [questionText, setQuestionText] = useState('解方程：3x - 5 = 10，求 x 的值。')
-  const [answerText, setAnswerText] = useState('x = 3')
+  const [showSkipModal, setShowSkipModal] = useState(false)
+  const [showExitModal, setShowExitModal] = useState(false)
+
+  const questions = useMemo(() => {
+    const storedQuestions = sessionStorage.getItem('selectedQuestions')
+    if (storedQuestions) {
+      try {
+        const parsed = JSON.parse(storedQuestions)
+        const questionIds = parsed.map((q: { id: number }) => q.id)
+        return mockQuestions.filter(q => questionIds.includes(q.id))
+      } catch {
+        console.error('Failed to parse selectedQuestions from sessionStorage')
+      }
+    }
+    const rawCount = parseInt(searchParams.get('count') || '5', 10)
+    const queueLength = Math.min(Math.max(rawCount, 1), mockQuestions.length)
+    return mockQuestions.slice(0, queueLength)
+  }, [searchParams])
+
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [processedCount, setProcessedCount] = useState(0)
+  const [judgmentResult, setJudgmentResult] = useState<'正确' | '错误' | '无法判断' | '部分正确'>('错误')
+
+  // 区分保存、暂存、跳过三种处理结果
+  const [savedQuestions, setSavedQuestions] = useState<QuestionData[]>([])
+  const [pendingQuestions, setPendingQuestions] = useState<QuestionData[]>([])
+  const [skippedQuestions, setSkippedQuestions] = useState<QuestionData[]>([])
+
+  const [questionText, setQuestionText] = useState(questions[0].title)
+  const [answerText, setAnswerText] = useState(questions[0].aiAnswer)
   const [tempQuestionText, setTempQuestionText] = useState('')
   const [tempAnswerText, setTempAnswerText] = useState('')
   const [showQuestionEditModal, setShowQuestionEditModal] = useState(false)
   const [showAnswerEditModal, setShowAnswerEditModal] = useState(false)
   const [showPhotoModal, setShowPhotoModal] = useState(false)
 
-  const currentQuestion = 1
-  const totalQuestions = 4
-  const progress = Math.round((currentQuestion / totalQuestions) * 100)
+  const currentQuestion = currentIndex + 1
+  const totalQuestions = questions.length
+  const progress = Math.round((processedCount / totalQuestions) * 100)
+
+  const currentData = questions[currentIndex]
+
+  // 统一处理"进入下一题"或"完成处理"的逻辑
+  const goToNextOrFinish = (
+    nextSaved: QuestionData[],
+    nextPending: QuestionData[],
+    nextSkipped: QuestionData[]
+  ) => {
+    if (currentIndex < totalQuestions - 1) {
+      const nextIdx = currentIndex + 1
+      setCurrentIndex(nextIdx)
+      setProcessedCount(prev => prev + 1)
+      setQuestionText(questions[nextIdx].title)
+      setAnswerText(questions[nextIdx].aiAnswer)
+      setJudgmentResult(questions[nextIdx].judgment === '部分正确' ? '错误' : questions[nextIdx].judgment)
+    } else {
+      // 最后一题处理完成，写入 sessionStorage
+      sessionStorage.setItem('processedTotal', String(totalQuestions))
+      sessionStorage.setItem('savedQuestions', JSON.stringify(nextSaved))
+      sessionStorage.setItem('pendingQuestions', JSON.stringify(nextPending))
+      sessionStorage.setItem('skippedQuestions', JSON.stringify(nextSkipped))
+      sessionStorage.setItem('savedCount', String(nextSaved.length))
+      sessionStorage.setItem('pendingCount', String(nextPending.length))
+      sessionStorage.setItem('skippedCount', String(nextSkipped.length))
+
+      // 跳转到保存成功页，传递真实统计
+      navigate(`/save-success?total=${totalQuestions}&saved=${nextSaved.length}&pending=${nextPending.length}&skipped=${nextSkipped.length}`)
+    }
+  }
 
   const handleSaveDraft = () => {
-    setToastMessage('已保存到待完善错题，可在错题本中继续编辑')
+    setToastMessage(`第${currentQuestion}题已暂存到待完善`)
     setShowToast(true)
     setTimeout(() => {
       setShowToast(false)
-      navigate('/mistakes')
+      const nextPendingQuestions = [...pendingQuestions, currentData]
+      setPendingQuestions(nextPendingQuestions)
+      goToNextOrFinish(savedQuestions, nextPendingQuestions, skippedQuestions)
     }, 1500)
   }
 
-  // 题目编辑相关函数
+  const handleSkip = () => {
+    setShowSkipModal(true)
+  }
+
+  const handleConfirmSkip = () => {
+    setShowSkipModal(false)
+    setToastMessage(`第${currentQuestion}题已跳过`)
+    setShowToast(true)
+    setTimeout(() => {
+      setShowToast(false)
+      const nextSkippedQuestions = [...skippedQuestions, currentData]
+      setSkippedQuestions(nextSkippedQuestions)
+      goToNextOrFinish(savedQuestions, pendingQuestions, nextSkippedQuestions)
+    }, 1500)
+  }
+
+  const handleSaveCurrent = () => {
+    setToastMessage(`第${currentQuestion}题已保存到错题本`)
+    setShowToast(true)
+    setTimeout(() => {
+      setShowToast(false)
+      const nextSavedQuestions = [...savedQuestions, currentData]
+      setSavedQuestions(nextSavedQuestions)
+      goToNextOrFinish(nextSavedQuestions, pendingQuestions, skippedQuestions)
+    }, 1500)
+  }
+
+  const handleExit = () => {
+    setShowExitModal(true)
+  }
+
+  const handleConfirmExit = () => {
+    setShowExitModal(false)
+    setToastMessage('未处理题目已暂存，可稍后继续完善')
+    setShowToast(true)
+    setTimeout(() => {
+      setShowToast(false)
+      navigate(`/mistakes?filter=incomplete&count=${totalQuestions}`)
+    }, 1500)
+  }
+
   const handleOpenQuestionEdit = () => {
     setTempQuestionText(questionText)
     setShowQuestionEditModal(true)
@@ -65,7 +254,6 @@ export default function AnalyzePage() {
     setTimeout(() => setShowToast(false), 2000)
   }
 
-  // 答案编辑相关函数
   const handleOpenAnswerEdit = () => {
     setTempAnswerText(answerText)
     setShowAnswerEditModal(true)
@@ -91,7 +279,6 @@ export default function AnalyzePage() {
     setTimeout(() => setShowToast(false), 2000)
   }
 
-  // 拍照识别答案相关函数
   const handleOpenPhotoModal = () => {
     setShowPhotoModal(true)
   }
@@ -102,7 +289,7 @@ export default function AnalyzePage() {
 
   const handleSimulateRecognize = () => {
     setShowPhotoModal(false)
-    setAnswerText('x = 3\n移项后计算为 3')
+    setAnswerText(currentData.correctAnswer)
     setToastMessage('答案已重新识别')
     setShowToast(true)
     setTimeout(() => setShowToast(false), 2000)
@@ -119,17 +306,13 @@ export default function AnalyzePage() {
     setTimeout(() => setShowToast(false), 2000)
   }
 
-  const handleDiscard = () => {
-    setShowDiscardModal(true)
-  }
-
-  const handleConfirmDiscard = () => {
-    setShowDiscardModal(false)
-    navigate('/home')
-  }
-
-  const handleAddToMistakes = () => {
-    navigate('/save-mistake')
+  const getJudgmentType = (judgment: string) => {
+    switch (judgment) {
+      case '正确': return 'success'
+      case '部分正确': return 'warning'
+      case '错误': return 'error'
+      default: return 'warning'
+    }
   }
 
   return (
@@ -137,12 +320,20 @@ export default function AnalyzePage() {
       <Header
         title={`第${currentQuestion}题 / 共${totalQuestions}题`}
         showBack
-        rightAction={<span onClick={handleSaveDraft} className="text-gray-600 text-sm font-medium">暂存</span>}
+        rightAction={
+          <button
+            type="button"
+            onClick={handleExit}
+            className="px-3 py-1.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 rounded-lg transition-colors border border-gray-200"
+          >
+            暂存退出
+          </button>
+        }
       />
 
       <div className="px-4 py-3 bg-white border-b border-gray-100">
         <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-          <span>正在处理第{currentQuestion}题，共{totalQuestions}题</span>
+          <span>已处理 {processedCount} / 共 {totalQuestions} 题</span>
           <span>{progress}%</span>
         </div>
         <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
@@ -151,6 +342,7 @@ export default function AnalyzePage() {
             style={{ width: `${progress}%` }}
           />
         </div>
+        <p className="text-gray-500 text-xs mt-2">请确认当前题目的识别结果、判题结果和错因分析。</p>
       </div>
 
       <div className="flex-1 px-4 py-4 overflow-y-auto">
@@ -203,18 +395,18 @@ export default function AnalyzePage() {
             </button>
           </div>
           <div className="flex items-center gap-2 mb-4">
-            <StatusTag type={judgmentResult === '正确' ? 'success' : judgmentResult === '无法判断' ? 'warning' : 'error'}>
-              {judgmentResult}
+            <StatusTag type={getJudgmentType(currentData.judgment)}>
+              {currentData.judgment}
             </StatusTag>
           </div>
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <span className="text-gray-500 text-sm">我的答案：</span>
-              <span className="text-red-600 font-mono">{judgmentResult === '正确' ? 'x = 5' : answerText}</span>
+              <span className={`${currentData.judgment !== '正确' ? 'text-red-600' : 'text-green-600'} font-mono`}>{answerText}</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-gray-500 text-sm">正确答案：</span>
-              <span className="text-green-600 font-mono font-semibold">x = 5</span>
+              <span className="text-green-600 font-mono font-semibold">{currentData.correctAnswer}</span>
             </div>
           </div>
         </AppCard>
@@ -230,51 +422,48 @@ export default function AnalyzePage() {
           <div className="space-y-3">
             <div>
               <p className="text-gray-500 text-xs mb-1">错误类型</p>
-              <StatusTag type="error">计算错误</StatusTag>
+              <StatusTag type={currentData.judgment === '正确' ? 'success' : 'error'}>
+                {currentData.judgment === '正确' ? '答题正确' : '答题错误'}
+              </StatusTag>
             </div>
             
             <div>
               <p className="text-gray-500 text-xs mb-1">错误原因</p>
-              <p className="text-gray-800 text-sm">你在移项时遗漏了负号，导致结果计算错误</p>
+              <p className="text-gray-800 text-sm">{currentData.analysis}</p>
             </div>
             
             <div>
               <p className="text-gray-500 text-xs mb-1">关联知识点</p>
-              <StatusTag type="ai">一元一次方程移项</StatusTag>
-            </div>
-            
-            <div>
-              <p className="text-gray-500 text-xs mb-1">历史提醒</p>
-              <div className="flex items-center gap-2">
-                <StatusTag type="warning">近7天重复出现</StatusTag>
-                <span className="text-gray-400 text-xs">该错误近7天出现2次</span>
-              </div>
+              <StatusTag type="ai">AI识别结果</StatusTag>
             </div>
           </div>
         </AppCard>
       </div>
 
       <div className="px-4 py-4 pb-[max(env(safe-area-inset-bottom),20px)] bg-white border-t border-gray-100">
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <SecondaryButton className="w-full" onClick={handleDiscard}>
-              不加入错题本
-            </SecondaryButton>
-          </div>
+        <div className="flex gap-2">
           <div className="flex-1">
             <SecondaryButton className="w-full" onClick={handleSaveDraft}>
-              暂时保存
+              暂存当前题
             </SecondaryButton>
           </div>
           <div className="flex-1">
-            <PrimaryButton className="w-full" onClick={handleAddToMistakes}>
-              加入错题本
+            <button 
+              type="button"
+              onClick={handleSkip}
+              className="w-full h-12 px-4 rounded-xl bg-gray-100 text-gray-600 font-medium hover:bg-gray-200 active:bg-gray-300 transition-colors"
+            >
+              跳过当前题
+            </button>
+          </div>
+          <div className="flex-1">
+            <PrimaryButton className="w-full" onClick={handleSaveCurrent}>
+              保存当前题
             </PrimaryButton>
           </div>
         </div>
       </div>
 
-      {/* 题目编辑 Modal */}
       <Modal
         open={showQuestionEditModal}
         title="编辑题目"
@@ -294,7 +483,6 @@ export default function AnalyzePage() {
         />
       </Modal>
 
-      {/* 答案编辑 Modal */}
       <Modal
         open={showAnswerEditModal}
         title="编辑我的答案"
@@ -314,7 +502,6 @@ export default function AnalyzePage() {
         />
       </Modal>
 
-      {/* 拍照识别答案 Modal */}
       <Modal
         open={showPhotoModal}
         title="拍照识别答案"
@@ -370,14 +557,48 @@ export default function AnalyzePage() {
         </div>
       </Modal>
 
+      {/* 自定义跳过确认弹窗 - 确保两个按钮都显示 */}
+      {showSkipModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setShowSkipModal(false)}
+          />
+          <div className="relative bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm mx-0 sm:mx-4 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">跳过当前题？</h3>
+            <p className="text-gray-600 text-sm mb-6">
+              跳过后，这道题不会加入错题本，你可以继续处理下一题。
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                className="flex-1 h-12 bg-gray-100 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-200 active:bg-gray-300 transition-colors"
+                onClick={() => setShowSkipModal(false)}
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                className="flex-1 h-12 bg-primary-600 text-white rounded-xl text-sm font-semibold hover:bg-primary-700 active:bg-primary-800 transition-colors"
+                onClick={handleConfirmSkip}
+              >
+                确认跳过
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Modal
-        open={showDiscardModal}
-        title="确定不保存这道题吗？"
-        onConfirm={handleConfirmDiscard}
-        confirmText="不保存"
-        cancelText="继续保存"
+        open={showExitModal}
+        title="退出识别流程？"
+        onConfirm={handleConfirmExit}
+        confirmText="暂存并退出"
+        cancelText="继续处理"
       >
-        <p className="text-gray-600 text-sm">保存后可以用于后续复习和举一反三练习。</p>
+        <p className="text-gray-600 text-sm">
+          还有未处理的题目，退出后未保存的题目不会进入错题本。
+        </p>
       </Modal>
 
       <Toast message={toastMessage} visible={showToast} />

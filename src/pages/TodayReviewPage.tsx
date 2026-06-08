@@ -28,6 +28,13 @@ const REVIEW_MODE_TEXT: Record<ReviewMode, string> = {
   similar: '举一反三'
 }
 
+const REVIEW_MODE_DESCRIPTION: Record<ReviewMode, string> = {
+  quick: '适合已经基本掌握，但需要短暂确认的错题',
+  recall: '适合需要确认思路是否还记得的错题',
+  redo: '适合上次未掌握或容易重复出错的错题',
+  similar: '适合验证是否能迁移到同类题的错题'
+}
+
 const REVIEW_MODE_ACTION_TEXT: Record<ReviewMode, string> = {
   quick: '快速回看',
   recall: '开始回忆',
@@ -40,8 +47,8 @@ const STORAGE_KEY = 'todayReviewCompletedTaskIds'
 export default function TodayReviewPage() {
   const navigate = useNavigate()
   const [showInfoModal, setShowInfoModal] = useState(false)
-  const [showToast, setShowToast] = useState(false)
-  const [toastMessage, setToastMessage] = useState('')
+  const [showToast, setToastMessage] = useState(false)
+  const [toastMessage, setToastMessageContent] = useState('')
   const [completedTaskIds, setCompletedTaskIds] = useState<string[]>([])
 
   const reviewTasks: ReviewTask[] = [
@@ -110,10 +117,9 @@ export default function TodayReviewPage() {
     return completedTaskIds.includes(taskId) ? 'completed' : 'pending'
   }
 
-  const completedCount = reviewTasks.filter(t => getTaskStatus(t.taskId) === 'completed').length
-  const pendingCount = reviewTasks.filter(t => getTaskStatus(t.taskId) !== 'completed').length
+  const priorityCount = reviewTasks.filter(t => getTaskStatus(t.taskId) !== 'completed' && (t.reviewMode === 'redo' || t.reviewMode === 'similar')).length
+  const quickCount = reviewTasks.filter(t => getTaskStatus(t.taskId) !== 'completed' && (t.reviewMode === 'quick')).length
   const totalCount = reviewTasks.length
-  const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
 
   const handleBack = () => {
     navigate('/home')
@@ -133,13 +139,13 @@ export default function TodayReviewPage() {
     return null
   }
 
-  const handleContinueNext = () => {
+  const handleStartPriorityReview = () => {
     const firstTask = getFirstPendingTask()
     
     if (!firstTask) {
-      setToastMessage('今日复习已完成')
-      setShowToast(true)
-      setTimeout(() => setShowToast(false), 2000)
+      setToastMessageContent('暂无需要优先复习的错题')
+      setToastMessage(true)
+      setTimeout(() => setToastMessage(false), 2000)
       return
     }
     
@@ -167,10 +173,24 @@ export default function TodayReviewPage() {
     }
   }
 
+  const getStatusTag = (task: ReviewTask) => {
+    const status = getTaskStatus(task.taskId)
+    if (status === 'completed') {
+      return <StatusTag type="success">已回顾</StatusTag>
+    }
+    if (task.reviewMode === 'redo' || task.reviewMode === 'similar') {
+      return <StatusTag type="error">建议优先</StatusTag>
+    }
+    if (task.reviewMode === 'recall') {
+      return <StatusTag type="warning">需动手</StatusTag>
+    }
+    return <StatusTag type="default">可回看</StatusTag>
+  }
+
   return (
     <div className="min-h-screen bg-[#F6F8FB] flex flex-col">
       <Header
-        title="今日复习"
+        title="推荐复习"
         showBack
         rightAction={
           <button
@@ -184,43 +204,52 @@ export default function TodayReviewPage() {
       />
 
       <div className="flex-1 px-4 py-4 overflow-y-auto">
-        <AppCard className="mb-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <CalendarDays className="w-5 h-5 text-primary-600" />
-              <span className="text-gray-900 font-semibold">今日任务概览</span>
-            </div>
-            <span className="text-primary-600 font-bold text-xl">{completionRate}%</span>
-          </div>
-          
-          <div className="grid grid-cols-3 gap-4 mb-4">
-            <div className="text-center">
-              <p className="text-gray-500 text-xs mb-1">今日需复习</p>
-              <p className="text-gray-800 font-bold text-xl">{totalCount} 题</p>
-            </div>
-            <div className="text-center">
-              <p className="text-gray-500 text-xs mb-1">已完成</p>
-              <p className="text-green-600 font-bold text-xl">{completedCount} 题</p>
-            </div>
-            <div className="text-center">
-              <p className="text-gray-500 text-xs mb-1">剩余</p>
-              <p className="text-orange-500 font-bold text-xl">{pendingCount} 题</p>
-            </div>
-          </div>
+        <div className="text-center mb-4">
+          <p className="text-gray-500 text-sm">根据你的错题状态，推荐今天可以优先回看的内容</p>
+        </div>
 
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
-              className="bg-primary-500 h-2 rounded-full transition-all" 
-              style={{ width: `${completionRate}%` }}
-            ></div>
+        <AppCard className="mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <CalendarDays className="w-5 h-5 text-primary-600" />
+            <span className="text-gray-900 font-semibold">今日推荐复习</span>
+          </div>
+          <p className="text-gray-600 text-sm mb-4">系统根据待复习状态、掌握度和最近练习表现，推荐你优先回看这些错题。</p>
+          
+          <div className="grid grid-cols-4 gap-3">
+            <div className="text-center">
+              <p className="text-gray-500 text-xs mb-1">推荐复习</p>
+              <p className="text-gray-800 font-bold">{totalCount}题</p>
+            </div>
+            <div className="text-center">
+              <p className="text-gray-500 text-xs mb-1">重点关注</p>
+              <p className="text-orange-500 font-bold">{priorityCount}题</p>
+            </div>
+            <div className="text-center">
+              <p className="text-gray-500 text-xs mb-1">快速回看</p>
+              <p className="text-blue-600 font-bold">{quickCount}题</p>
+            </div>
+            <div className="text-center">
+              <p className="text-gray-500 text-xs mb-1">建议用时</p>
+              <p className="text-primary-600 font-bold">20分钟</p>
+            </div>
           </div>
         </AppCard>
 
         <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-4">
           <div className="flex items-start gap-2">
             <Target className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-            <p className="text-blue-600 text-sm">AI 已根据错题状态为你安排不同复习方式，你可以按顺序继续，也可以选择某一项单独复习。</p>
+            <div>
+              <p className="text-blue-700 text-sm font-medium mb-1">推荐依据</p>
+              <p className="text-blue-600 text-xs">待复习状态、重复错误次数、掌握度、最近练习正确率</p>
+            </div>
           </div>
+        </div>
+
+        <div className="mb-3">
+          <h3 className="text-gray-900 font-semibold flex items-center gap-2">
+            <BookOpen className="w-4 h-4 text-primary-600" />
+            推荐复习列表
+          </h3>
         </div>
 
         <div className="space-y-3">
@@ -253,9 +282,10 @@ export default function TodayReviewPage() {
                   </div>
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-gray-500 text-xs">复习方式：</span>
-                    <StatusTag type={task.reviewMode === 'recall' ? 'warning' : 'default'}>
+                    <StatusTag type={task.reviewMode === 'redo' || task.reviewMode === 'similar' ? 'warning' : 'default'}>
                       {REVIEW_MODE_TEXT[task.reviewMode]}
                     </StatusTag>
+                    <span className="text-gray-400 text-xs">{REVIEW_MODE_DESCRIPTION[task.reviewMode]}</span>
                   </div>
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-gray-500 text-xs">复习原因：</span>
@@ -263,11 +293,7 @@ export default function TodayReviewPage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      {status === 'completed' ? (
-                        <StatusTag type="success">已完成</StatusTag>
-                      ) : (
-                        <StatusTag type="default">待复习</StatusTag>
-                      )}
+                      {getStatusTag(task)}
                     </div>
                     {status === 'completed' ? (
                       <span className="text-gray-400 text-sm font-medium">
@@ -294,8 +320,8 @@ export default function TodayReviewPage() {
             </SecondaryButton>
           </div>
           <div className="flex-1">
-            <PrimaryButton className="w-full" onClick={handleContinueNext}>
-              继续下一项
+            <PrimaryButton className="w-full" onClick={handleStartPriorityReview}>
+              开始优先复习
             </PrimaryButton>
           </div>
         </div>
@@ -303,12 +329,12 @@ export default function TodayReviewPage() {
 
       <Modal
         open={showInfoModal}
-        title="今日复习说明"
+        title="推荐复习说明"
         confirmText="我知道了"
         onCancel={() => setShowInfoModal(false)}
       >
         <p className="text-gray-600 text-sm">
-          系统会根据错题掌握状态、错误频率和上次复习时间，推荐今天最需要复习的错题。
+          系统会根据错题掌握状态、错误频率和上次复习时间，推荐今天可以优先回看的内容。
         </p>
       </Modal>
 
