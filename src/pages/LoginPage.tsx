@@ -18,7 +18,7 @@ export default function LoginPage() {
           <span className="text-white text-2xl font-bold">AI</span>
         </div>
         
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">AI错题本</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">AI数学错题本</h1>
         <p className="text-gray-500 text-center mb-12">
           记录错题，理解错因，练会同类题
         </p>

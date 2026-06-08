@@ -70,24 +70,42 @@ export default function ProfilePage() {
   return (
     <div className="pb-24">
       <div className="px-4 pt-4">
-        <AppCard className="p-4 mb-4">
+        {/* 个人资料卡片 */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm mb-4">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+            {/* 头像 */}
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0">
               <User className="w-8 h-8 text-white" />
             </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-gray-900 text-lg">{nickname}</h3>
-              <div className="flex flex-wrap gap-2 mt-2">
-                <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">{grade}</span>
-                <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">{currentTextbook}</span>
-                <span className="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded-full">{currentGoal}</span>
+
+            {/* 中间信息区 */}
+            <div className="flex-1 min-w-0">
+              {/* 用户名 - 横向显示 */}
+              <h2 className="text-xl font-bold text-gray-900 whitespace-nowrap overflow-hidden text-overflow-ellipsis">
+                {nickname}
+              </h2>
+              {/* 副标题 - 横向显示 */}
+              <p className="text-sm text-gray-500 mt-1 whitespace-nowrap">
+                {grade} · {currentTextbook} · {currentGoal}
+              </p>
+              {/* 标签行 - 横向排列 */}
+              <div className="flex flex-wrap gap-2 mt-3">
+                <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-xs whitespace-nowrap">{grade}</span>
+                <span className="px-3 py-1 rounded-full bg-green-50 text-green-600 text-xs whitespace-nowrap">{currentTextbook}</span>
+                <span className="px-3 py-1 rounded-full bg-orange-50 text-orange-600 text-xs whitespace-nowrap">{currentGoal}</span>
               </div>
             </div>
-            <SecondaryButton onClick={() => setShowEditModal(true)} className="text-sm px-4 py-1.5">
+
+            {/* 右侧按钮 */}
+            <button
+              type="button"
+              onClick={() => setShowEditModal(true)}
+              className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 flex-shrink-0 whitespace-nowrap"
+            >
               编辑资料
-            </SecondaryButton>
+            </button>
           </div>
-        </AppCard>
+        </div>
 
         <AppCard className="p-4 mb-4">
           <h3 className="font-semibold text-gray-900 mb-4">学习数据</h3>
@@ -179,7 +197,7 @@ export default function ProfilePage() {
               <ChevronRight className="w-5 h-5 text-gray-400" />
             </button>
             <button className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50">
-              <span className="text-gray-700">关于 AI错题本</span>
+              <span className="text-gray-700">关于 AI数学错题本</span>
               <ChevronRight className="w-5 h-5 text-gray-400" />
             </button>
           </div>

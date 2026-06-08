@@ -351,7 +351,7 @@ export default function MistakeListPage() {
       <div className="px-4 pt-4 md:px-0">
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
           <div>
-            <h1 className="text-xl font-bold text-gray-900 mb-2">数学错题本</h1>
+            <h1 className="text-xl font-bold text-gray-900 mb-2">AI数学错题本</h1>
             <p className="text-sm text-gray-500">按单元、课时和错因管理你的数学错题</p>
           </div>
           {/* 教材信息 - 可点击 */}
